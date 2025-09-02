@@ -1,0 +1,425 @@
+openapi: 3.1.0
+info:
+  title: Flask Actions
+  version: "1.0.0"
+servers:
+  - url: https://b032d53ee173.ngrok-free.app
+paths:
+  "/industries":
+    get:
+      operationId: get_industries
+      summary: List available industries
+      responses:
+        "200":
+          description: List of industries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industries:
+                    type: array
+                    items:
+                      type: string
+
+  "/industry/{industry}/companies":
+    get:
+      operationId: get_industry_companies
+      summary: Get ranked company names for an industry
+      parameters:
+        - in: path
+          name: industry
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ranked company names
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industry:
+                    type: string
+                  year:
+                    type: ["string", "null"]
+                  month:
+                    type: ["integer", "null"]
+                  companies:
+                    type: array
+                    items:
+                      type: string
+
+  "/company":
+    get:
+      operationId: get_company
+      summary: Get company data by exact name
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company ranking entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyRanking'
+        "404":
+          description: Not found
+
+  "/companies":
+    post:
+      operationId: get_companies
+      summary: Get multiple companies data, optionally within an industry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                companies:
+                  type: array
+                  items:
+                    type: string
+                industry:
+                  type: string
+                year:
+                  type: string
+                month:
+                  type: integer
+              required: [companies]
+      responses:
+        "200":
+          description: Map of company name to data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industry:
+                    type: ["string", "null"]
+                  year:
+                    type: ["string", "null"]
+                  month:
+                    type: ["integer", "null"]
+                  results:
+                    type: object
+                    additionalProperties:
+                      oneOf:
+                        - $ref: '#/components/schemas/CompanyRanking'
+                        - type: 'null'
+
+  "/industry/{industry}/rank/{rank}":
+    get:
+      operationId: get_company_nth_rank
+      summary: Get the nth ranked company within an industry (1-based)
+      parameters:
+        - in: path
+          name: industry
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: rank
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company ranking entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyRanking'
+        "404":
+          description: Not found
+
+  "/industry/{industry}/rankings":
+    get:
+      operationId: get_industry_rankings
+      summary: List rankings for an industry (paginated)
+      parameters:
+        - in: path
+          name: industry
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rankings page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industry:
+                    type: string
+                  year:
+                    type: ["string", "null"]
+                  month:
+                    type: ["integer", "null"]
+                  limit:
+                    type: ["integer", "null"]
+                  offset:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompanyRanking'
+
+  "/industry/{industry}/overview":
+    get:
+      operationId: get_industry_overview
+      summary: Get overview metadata for an industry
+      parameters:
+        - in: path
+          name: industry
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Industry overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustryOverview'
+        "404":
+          description: Not found
+
+  "/industry/{industry}/top-companies":
+    get:
+      operationId: get_top_companies
+      summary: Get curated top companies for an industry
+      parameters:
+        - in: path
+          name: industry
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Top companies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industry:
+                    type: string
+                  top_companies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopCompany'
+
+  "/search/companies":
+    get:
+      operationId: search_companies
+      summary: Search companies by substring
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  q:
+                    type: string
+                  year:
+                    type: ["string", "null"]
+                  month:
+                    type: ["integer", "null"]
+                  limit:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        company:
+                          type: string
+                        industry:
+                          type: string
+                        ranking:
+                          type: integer
+
+  "/periods":
+    get:
+      operationId: get_periods
+      summary: List all available year/month pairs (optionally for one industry)
+      parameters:
+        - in: query
+          name: industry
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available periods
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industry:
+                    type: ["string", "null"]
+                  periods:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        year:
+                          type: string
+                        month:
+                          type: integer
+
+  
+
+components:
+  schemas:
+    TopCompany:
+      type: object
+      properties:
+        name:
+          type: string
+        logo:
+          type: string
+          description: URL
+        country:
+          type: string
+          description: ISO-3166 alpha-2
+      required: [name]
+
+    IndustryOverview:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        top_companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopCompany'
+        data_ratio:
+          type: number
+        ai_ratio:
+          type: number
+
+    CompanyRanking:
+      type: object
+      properties:
+        company:
+          type: string
+        ranking:
+          type: integer
+        month:
+          type: integer
+        year:
+          type: string
+        pool_on_total_employees:
+          type: ["number", "null"]
+        hunt_on_pool:
+          type: ["string", "null"]
+        ratio_ai:
+          type: ["number", "null"]
+        ratio_data_analytics:
+          type: ["number", "null"]
+        ratio_data_engineering:
+          type: ["number", "null"]
+        ratio_data_science:
+          type: ["number", "null"]
+        score_ai:
+          type: ["number", "null"]
+        score_data_analytics:
+          type: ["number", "null"]
+        score_data_engineering:
+          type: ["number", "null"]
+        score_data_science:
+          type: ["number", "null"]
+        total_score:
+          type: ["number", "null"]
+        industry:
+          type: string
+
