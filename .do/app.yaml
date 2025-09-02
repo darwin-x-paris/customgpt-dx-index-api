@@ -1,6 +1,6 @@
-name: sample-flask
+name: customgpt-dx-index-api
 services:
 - name: web
   github:
-    repo: digitalocean/sample-flask
+    repo: darwin-x-paris/customgpt-dx-index-api
     branch: main
