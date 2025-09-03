@@ -17,6 +17,23 @@ from .services.service_industries import (
 api_bp = Blueprint('api', __name__)
 
 
+@api_bp.before_request
+def _enforce_bearer_token():
+	# Allow unauthenticated access to the health check endpoint
+	if request.endpoint == 'api.health_check':
+		return None
+	expected_key = current_app.config.get('API_KEY')
+	if not expected_key:
+		return jsonify({"error": "Unauthorized"}), 401
+	auth_header = request.headers.get('Authorization', '')
+	prefix = 'Bearer '
+	if not auth_header.startswith(prefix):
+		return jsonify({"error": "Unauthorized"}), 401
+	provided_key = auth_header[len(prefix):]
+	if provided_key != expected_key:
+		return jsonify({"error": "Forbidden"}), 403
+
+
 @api_bp.get('/')
 def health_check():
 	return "Healthy.", 200
