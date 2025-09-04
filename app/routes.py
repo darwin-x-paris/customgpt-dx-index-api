@@ -13,6 +13,7 @@ from .services.service_industries import (
 	search_companies,
 	get_available_periods,
 	get_discover_schema,
+	load_data,
 )
 
 
@@ -51,11 +52,14 @@ def health_check():
 
 @api_bp.get('/industries')
 def api_get_industries():
+	# Ensure data is loaded/normalized
+	load_data()
 	return jsonify({"industries": get_industries()}), 200
 
 
 @api_bp.get('/industry/<string:industry>/companies')
 def api_get_industry_companies(industry: str):
+	load_data()
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
 	companies = get_industry_companies(industry, year=year, month=month)
@@ -64,6 +68,7 @@ def api_get_industry_companies(industry: str):
 
 @api_bp.get('/company')
 def api_get_company():
+	load_data()
 	name = request.args.get('name')
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
@@ -78,6 +83,7 @@ def api_get_company():
 
 @api_bp.post('/companies')
 def api_get_companies():
+	load_data()
 	body = request.get_json(silent=True) or {}
 	current_app.logger.info("POST %s body=%s", request.path, body)
 	companies = body.get('companies')
@@ -97,6 +103,7 @@ def api_get_companies():
 
 @api_bp.get('/industry/<string:industry>/rank/<int:rank>')
 def api_get_company_nth_rank(industry: str, rank: int):
+	load_data()
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
 	data = get_company_nth_rank(rank, industry, year=year, month=month)
@@ -107,6 +114,7 @@ def api_get_company_nth_rank(industry: str, rank: int):
 
 @api_bp.get('/industry/<string:industry>/rankings')
 def api_get_industry_rankings(industry: str):
+	load_data()
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
 	try:
@@ -131,6 +139,7 @@ def api_get_industry_rankings(industry: str):
 
 @api_bp.get('/industry/<string:industry>/overview')
 def api_get_industry_overview(industry: str):
+	load_data()
 	overview = get_industry_overview(industry)
 	if not overview:
 		return jsonify({"error": "Industry not found"}), 404
@@ -139,12 +148,14 @@ def api_get_industry_overview(industry: str):
 
 @api_bp.get('/industry/<string:industry>/top-companies')
 def api_get_top_companies(industry: str):
+	load_data()
 	items = get_top_companies(industry)
 	return jsonify({"industry": industry.upper(), "top_companies": items}), 200
 
 
 @api_bp.get('/search/companies')
 def api_search_companies():
+	load_data()
 	company = request.args.get('company', default=None, type=str)
 	limit = request.args.get('limit', default=25, type=int)
 	year = request.args.get('year', default=None, type=str)
@@ -159,6 +170,7 @@ def api_search_companies():
 
 @api_bp.get('/periods')
 def api_get_periods():
+	load_data()
 	industry = request.args.get('industry', default=None, type=str)
 	items = get_available_periods(industry=industry)
 	return jsonify({"industry": (industry.upper() if industry else None), "periods": items}), 200
@@ -166,6 +178,7 @@ def api_get_periods():
 
 @api_bp.get('/discover')
 def api_discover():
+	load_data()
 	data = get_discover_schema()
 	return jsonify(data), 200
 

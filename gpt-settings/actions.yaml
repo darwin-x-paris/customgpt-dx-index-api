@@ -463,14 +463,6 @@ components:
           type: ["number", "null"]
         hunt_on_pool:
           type: ["string", "null"]
-        ratio_ai:
-          type: ["number", "null"]
-        ratio_data_analytics:
-          type: ["number", "null"]
-        ratio_data_engineering:
-          type: ["number", "null"]
-        ratio_data_science:
-          type: ["number", "null"]
         score_ai:
           type: ["number", "null"]
         score_data_analytics:
@@ -479,7 +471,15 @@ components:
           type: ["number", "null"]
         score_data_science:
           type: ["number", "null"]
-        total_score:
+        total_ai:
+          type: ["number", "null"]
+        total_data_analytics:
+          type: ["number", "null"]
+        total_data_engineering:
+          type: ["number", "null"]
+        total_data_science:
+          type: ["number", "null"]
+        score_total:
           type: ["number", "null"]
         industry:
           type: string

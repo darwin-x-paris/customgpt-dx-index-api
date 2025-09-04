@@ -15,6 +15,41 @@ _CACHE_TS: Optional[float] = None
 _CACHE_TTL_SECONDS: int = 600
 
 
+def _rename_metric_fields(entry: Dict) -> None:
+	"""Rename keys in-place: 'period' -> 'month', 'score_*' -> 'total_*', 'ratio_*' -> 'score_*', and 'total_score' -> 'score_total'."""
+	# period -> month (first so downstream logic can rely on 'month')
+	if "period" in entry and "month" not in entry:
+		entry["month"] = entry.pop("period")
+	# First: score_* -> total_*
+	for key in list(entry.keys()):
+		if isinstance(key, str) and key.startswith("score_"):
+			new_key = "total_" + key[len("score_"):]
+			if new_key not in entry:
+				entry[new_key] = entry[key]
+			del entry[key]
+	# Second: ratio_* -> score_*
+	for key in list(entry.keys()):
+		if isinstance(key, str) and key.startswith("ratio_"):
+			new_key = "score_" + key[len("ratio_"):]
+			if new_key not in entry:
+				entry[new_key] = entry[key]
+			del entry[key]
+	# Finally: total_score -> score_total
+	if "total_score" in entry and "score_total" not in entry:
+		entry["score_total"] = entry.pop("total_score")
+
+
+def _normalize_scores_data(data: Dict) -> None:
+	"""Apply metric field renames across all score entries in-place."""
+	scores = data.get("scoresData", {}) or {}
+	for _industry_key, entries in scores.items():
+		if not isinstance(entries, list):
+			continue
+		for entry in entries:
+			if isinstance(entry, dict):
+				_rename_metric_fields(entry)
+
+
 def _load_data() -> Dict:
 	"""Fetch and cache industries data from the remote endpoint with TTL caching.
 
@@ -32,9 +67,16 @@ def _load_data() -> Dict:
 			return resp.json()
 
 	data = _fetch_remote()
+	# Normalize metric field names immediately after loading
+	_normalize_scores_data(data)
 	_CACHE = data
 	_CACHE_TS = now
 	return data
+
+
+def load_data() -> Dict:
+	"""Public accessor to fetch (and cache) the current dataset, ensuring normalization."""
+	return _load_data()
 
 
 def get_industries() -> List[str]:
@@ -80,7 +122,7 @@ def _get_latest_period_for_company(company: str) -> Optional[Dict[str, object]]:
 				continue
 			try:
 				y = int(str(entry.get("year")))
-				m = int(str(entry.get("period")))
+				m = int(str(entry.get("month")))
 			except (TypeError, ValueError):
 				continue
 			if latest_year is None or (y, m) > (latest_year, latest_month or 0):
@@ -291,7 +333,7 @@ def get_available_periods(industry: Optional[str] = None) -> List[Dict]:
 			iter_entries.extend(entries)
 	for entry in iter_entries:
 		year_val = entry.get("year")
-		period_val = entry.get("period")
+		period_val = entry.get("month")
 		if year_val is None or period_val is None:
 			continue
 		try:
@@ -312,7 +354,7 @@ def _matches_year_month(entry: Dict, year: Optional[str], month: Optional[int]) 
 			return False
 	if month is not None:
 		try:
-			if int(entry.get("period")) != int(month):
+			if int(entry.get("month")) != int(month):
 				return False
 		except (TypeError, ValueError):
 			return False
@@ -327,11 +369,9 @@ def _filter_entries(entries: List[Dict], year: Optional[str], month: Optional[in
 
 
 def _transform_entry(entry: Dict) -> Dict:
-	"""Transform a raw entry to API shape: rename 'period' -> 'month'."""
-	out = dict(entry)
-	if "period" in out:
-		out["month"] = out.pop("period")
-	return out
+	"""Transform a raw entry to API shape (already normalized)."""
+	# Entries are normalized on load; just return a shallow copy to avoid mutating callers
+	return dict(entry)
 
 
 
