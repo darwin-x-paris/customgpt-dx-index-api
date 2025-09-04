@@ -69,13 +69,7 @@ def api_get_company():
 	month = request.args.get('month', default=None, type=int)
 	if not name:
 		return jsonify({"error": "Query parameter 'name' is required"}), 400
-	# When no year/month filters are specified, return ALL entries for the company
-	if year is None and month is None:
-		items = get_company_entries(name)
-		if not items:
-			return jsonify({"error": f"Company not found: {name}"}), 404
-		return jsonify({"company": name, "results": items}), 200
-	# Otherwise return the single matching entry
+	# Return the single matching entry (defaults to latest period when not provided)
 	data = get_company_data(name, year=year, month=month)
 	if not data:
 		return jsonify({"error": f"Company not found: {name}"}), 404

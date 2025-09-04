@@ -25,7 +25,7 @@ paths:
   "/industry/{industry}/companies":
     get:
       operationId: get_industry_companies
-      summary: Get ranked company names for an industry
+      summary: Get ranked company names for an industry (defaults to latest period)
       parameters:
         - in: path
           name: industry
@@ -64,8 +64,8 @@ paths:
   "/company":
     get:
       operationId: get_company
-      summary: Get company data by exact name
-      description: Returns a single entry when year/month are specified; otherwise returns all entries for the company.
+      summary: Get company data by exact name (defaults to latest period)
+      description: Returns a single entry; when year/month are omitted, the latest available period is used.
       parameters:
         - in: query
           name: name
@@ -140,7 +140,7 @@ paths:
   "/industry/{industry}/rank/{rank}":
     get:
       operationId: get_company_nth_rank
-      summary: Get the nth ranked company within an industry (1-based)
+      summary: Get the nth ranked company within an industry (1-based, defaults to latest period)
       parameters:
         - in: path
           name: industry
@@ -176,7 +176,7 @@ paths:
   "/industry/{industry}/rankings":
     get:
       operationId: get_industry_rankings
-      summary: List rankings for an industry (paginated)
+      summary: List rankings for an industry (paginated, defaults to latest period)
       parameters:
         - in: path
           name: industry
@@ -276,7 +276,7 @@ paths:
   "/search/companies":
     get:
       operationId: search_companies
-      summary: Search companies by substring
+      summary: Search companies by substring (defaults to latest period per industry)
       parameters:
         - in: query
           name: company

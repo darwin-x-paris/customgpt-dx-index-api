@@ -59,16 +59,55 @@ def _get_scores_for_industry(industry: str) -> List[Dict]:
 	return list(scores.get(industry.upper(), []))
 
 
+def _get_latest_period_for_industry(industry: str) -> Optional[Dict[str, object]]:
+	"""Return latest { year: str, month: int } for the given industry, or None."""
+	periods = get_available_periods(industry=industry)
+	if not periods:
+		return None
+	return periods[-1]
+
+
+def _get_latest_period_for_company(company: str) -> Optional[Dict[str, object]]:
+	"""Return latest { year: str, month: int } where the company appears, or None."""
+	needle = company.strip().lower()
+	data = _load_data()
+	latest_year: Optional[int] = None
+	latest_month: Optional[int] = None
+	for _industry_key, entries in (data.get("scoresData", {}) or {}).items():
+		for entry in entries:
+			name = str(entry.get("company", "")).strip().lower()
+			if name != needle:
+				continue
+			try:
+				y = int(str(entry.get("year")))
+				m = int(str(entry.get("period")))
+			except (TypeError, ValueError):
+				continue
+			if latest_year is None or (y, m) > (latest_year, latest_month or 0):
+				latest_year, latest_month = y, m
+	if latest_year is None or latest_month is None:
+		return None
+	return {"year": str(latest_year), "month": int(latest_month)}
+
+
 def get_industry_companies(industry: str, year: Optional[str] = None, month: Optional[int] = None) -> List[str]:
 	"""Return ranked company names for an industry, ordered by ranking asc.
 
 	Falls back to top_companies names if detailed scores are missing.
 	"""
+	# Default to latest period if no filters provided
+	if year is None and month is None:
+		latest = _get_latest_period_for_industry(industry)
+		if latest:
+			year, month = str(latest["year"]), int(latest["month"])  # type: ignore[index]
 	scores = _get_scores_for_industry(industry)
-	if scores:
-		filtered = _filter_entries(scores, year=year, month=month)
-		sorted_scores = sorted(filtered if filtered else scores, key=lambda r: int(r.get("ranking", 10**9)))
-		return [str(entry.get("company", "")).strip() for entry in sorted_scores if entry.get("company")]
+	if not scores:
+		return []
+	filtered = _filter_entries(scores, year=year, month=month)
+	if not filtered:
+		return []
+	sorted_scores = sorted(filtered, key=lambda r: int(r.get("ranking", 10**9)))
+	return [str(entry.get("company", "")).strip() for entry in sorted_scores if entry.get("company")]
 
 
 def get_company_data(company: str, year: Optional[str] = None, month: Optional[int] = None) -> Optional[Dict]:
@@ -76,6 +115,11 @@ def get_company_data(company: str, year: Optional[str] = None, month: Optional[i
 
 	Adds an "industry" field to the returned dict.
 	"""
+	# If no period specified, pick the latest available period for this company
+	if year is None and month is None:
+		latest = _get_latest_period_for_company(company)
+		if latest:
+			year, month = str(latest["year"]), int(latest["month"])  # type: ignore[index]
 	needle = company.strip().lower()
 	data = _load_data()
 	for industry_key, entries in (data.get("scoresData", {}) or {}).items():
@@ -117,7 +161,12 @@ def get_companies_data(company_list: List[str], industry: Optional[str] = None, 
 		return results
 
 	if industry:
-		entries = _filter_entries(_get_scores_for_industry(industry), year=year, month=month) or _get_scores_for_industry(industry)
+		# Default to latest industry period when not provided
+		if year is None and month is None:
+			latest = _get_latest_period_for_industry(industry)
+			if latest:
+				year, month = str(latest["year"]), int(latest["month"])  # type: ignore[index]
+		entries = _filter_entries(_get_scores_for_industry(industry), year=year, month=month)
 		index = {str(e.get("company", "")).strip().lower(): e for e in entries}
 		for name in company_list:
 			key = name.strip().lower()
@@ -140,8 +189,12 @@ def get_company_nth_rank(rank: int, industry: str, year: Optional[str] = None, m
 	"""Return the company ranking entry at position `rank` (1-based) for an industry."""
 	if rank <= 0:
 		return None
+	if year is None and month is None:
+		latest = _get_latest_period_for_industry(industry)
+		if latest:
+			year, month = str(latest["year"]), int(latest["month"])  # type: ignore[index]
 	entries = _get_scores_for_industry(industry)
-	entries = _filter_entries(entries, year=year, month=month) or entries
+	entries = _filter_entries(entries, year=year, month=month)
 	if not entries:
 		return None
 	entries_sorted = sorted(entries, key=lambda r: int(r.get("ranking", 10**9)))
@@ -161,11 +214,26 @@ def search_companies(company: str, limit: int = 25, year: Optional[str] = None, 
 	if not company:
 		return []
 	data = _load_data()
+
+	# If no explicit period provided, restrict to the latest period per industry
+	latest_by_industry: Dict[str, Optional[Dict[str, object]]] = {}
+	if year is None and month is None:
+		for industry_key in (data.get("industries") or []):
+			latest_by_industry[industry_key] = _get_latest_period_for_industry(industry_key)
 	results: List[Dict[str, str]] = []
 	for industry_key, entries in (data.get("scoresData", {}) or {}).items():
 		for entry in entries:
 			name = str(entry.get("company", ""))
-			if company in name.lower() and _matches_year_month(entry, year=year, month=month):
+			# Determine effective year/month for this industry
+			_eff_year: Optional[str]
+			_eff_month: Optional[int]
+			if year is None and month is None:
+				latest = latest_by_industry.get(industry_key)
+				_eff_year = str(latest["year"]) if latest else None  # type: ignore[index]
+				_eff_month = int(latest["month"]) if latest else None  # type: ignore[index]
+			else:
+				_eff_year, _eff_month = year, month
+			if company in name.lower() and _matches_year_month(entry, year=_eff_year, month=_eff_month):
 				results.append({
 					"company": name,
 					"industry": industry_key,
@@ -182,8 +250,12 @@ def get_industry_rankings(industry: str, limit: Optional[int] = None, offset: in
 	Entries are sorted by ascending ranking. If limit is provided, results are sliced
 	from offset to offset+limit.
 	"""
+	if year is None and month is None:
+		latest = _get_latest_period_for_industry(industry)
+		if latest:
+			year, month = str(latest["year"]), int(latest["month"])  # type: ignore[index]
 	entries = _get_scores_for_industry(industry)
-	entries = _filter_entries(entries, year=year, month=month) or entries
+	entries = _filter_entries(entries, year=year, month=month)
 	if not entries:
 		return []
 	entries_sorted = sorted(entries, key=lambda r: int(r.get("ranking", 10**9)))
