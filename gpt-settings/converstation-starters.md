@@ -1,0 +1,5 @@
+- What data is available on the Darwin X AI Index?
+- List the top 10 companies for CPG, highlight any outliers and analyze relevant trends.
+- For L'Oréal, fetch all historical data and summarize its ranking trend by month.
+- Compare JPMorgan Chase vs Goldman Sachs in BANKING on latest data.
+- In CPG, between the two most recent periods, identify the 5 companies that improved their total score the most and explain likely drivers.
