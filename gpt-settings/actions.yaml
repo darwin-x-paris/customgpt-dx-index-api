@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: Flask Actions
-  version: "1.0.0"
+  title:  DX AI Index Explorer
+  version: "2.0.0"
 servers:
-  - url: https://b032d53ee173.ngrok-free.app
+  - url: https://customgpt-dx-index-api-x4534.ondigitalocean.app/
 paths:
   "/industries":
     get:
@@ -279,26 +279,31 @@ paths:
       summary: Search companies by substring
       parameters:
         - in: query
-          name: query
+          name: company
           required: true
           schema:
             type: string
+          description: Substring to match against company names (case-insensitive)
         - in: query
           name: limit
           required: false
           schema:
             type: integer
             minimum: 1
+            default: 25
+          description: Maximum number of results to return
         - in: query
           name: year
           required: false
           schema:
             type: string
+          description: Optional filter; only results in this year
         - in: query
           name: month
           required: false
           schema:
             type: integer
+          description: Optional filter; only results in this month (1-12)
       responses:
         "200":
           description: Search results
@@ -307,7 +312,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  query:
+                  company:
                     type: string
                   year:
                     type: ["string", "null"]
@@ -356,6 +361,59 @@ paths:
                           type: string
                         month:
                           type: integer
+
+  "/discover":
+    get:
+      operationId: get_discover
+      summary: Discover available data and sample schemas
+      description: Returns industries, human-friendly component schemas, and live examples sampled from the index.
+      responses:
+        "200":
+          description: Discovery payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  industries:
+                    type: array
+                    items:
+                      type: string
+                  examples:
+                    type: object
+                    properties:
+                      overview:
+                        oneOf:
+                          - $ref: '#/components/schemas/IndustryOverview'
+                          - type: 'null'
+                      company_ranking:
+                        oneOf:
+                          - $ref: '#/components/schemas/CompanyRanking'
+                          - type: 'null'
+                      top_companies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TopCompany'
+                      periods:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            year:
+                              type: string
+                            month:
+                              type: integer
+                      periods_by_industry:
+                        type: object
+                        additionalProperties:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              year:
+                                type: string
+                              month:
+                                type: integer
 
   
 

@@ -50,6 +50,19 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:5000/industries
 - Send `Authorization: Bearer <API_KEY>` for all endpoints except health `GET /`.
 - The API key is read from the `API_KEY` environment variable (via `.env` in development).
 
+#### OpenAI Actions setup (screenshot)
+
+When configuring this API as an Action in a custom GPT:
+
+- Select **Authentication Type: API Key**
+- Set **Auth Type: Bearer**
+- Paste your key in the **API Key** field
+- Use the same value as the `API_KEY` environment variable you set in production
+
+Screenshot reference:
+
+![OpenAI Actions API key and Bearer setup](.doc/setting-openai-api-key.png)
+
 Generate a secure key (PowerShell):
 
 ```powershell
@@ -122,8 +135,9 @@ Authentication: `Authorization: Bearer <API_KEY>` required on all routes except 
 |    GET | `/industry/<industry>/rankings`      | Ranked list for industry       | `limit`, `offset`, `year`, `month`                      |
 |    GET | `/industry/<industry>/overview`      | Industry overview              | —                                                              |
 |    GET | `/industry/<industry>/top-companies` | Top companies in industry      | —                                                              |
-|    GET | `/search/companies`                  | Search companies               | `q` (required), `limit`, `year`, `month`                |
+|    GET | `/search/companies`                  | Search companies               | `company` (required), `limit`, `year`, `month`          |
 |    GET | `/periods`                           | Available periods              | `industry`                                                    |
+|    GET | `/discover`                          | Discover data and live examples | —                                                            |
 
 Example requests:
 

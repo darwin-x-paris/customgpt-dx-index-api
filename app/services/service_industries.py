@@ -152,20 +152,20 @@ def get_company_nth_rank(rank: int, industry: str, year: Optional[str] = None, m
 	return result
 
 
-def search_companies(query: str, limit: int = 25, year: Optional[str] = None, month: Optional[int] = None) -> List[Dict[str, str]]:
+def search_companies(company: str, limit: int = 25, year: Optional[str] = None, month: Optional[int] = None) -> List[Dict[str, str]]:
 	"""Case-insensitive substring search across company names.
 
 	Returns a list of { company, industry, ranking } items.
 	"""
-	q = query.strip().lower()
-	if not q:
+	company = company.strip().lower()
+	if not company:
 		return []
 	data = _load_data()
 	results: List[Dict[str, str]] = []
 	for industry_key, entries in (data.get("scoresData", {}) or {}).items():
 		for entry in entries:
 			name = str(entry.get("company", ""))
-			if q in name.lower() and _matches_year_month(entry, year=year, month=month):
+			if company in name.lower() and _matches_year_month(entry, year=year, month=month):
 				results.append({
 					"company": name,
 					"industry": industry_key,
@@ -261,3 +261,50 @@ def _transform_entry(entry: Dict) -> Dict:
 		out["month"] = out.pop("period")
 	return out
 
+
+
+def get_discover_schema() -> Dict:
+	"""Return live discovery info: industries, inferred schemas, and live examples.
+
+	The payload is built from the current index data. A compact "schema" is
+	inferred from live example objects by inspecting their fields and mapping
+	Python types to human-friendly strings.
+	"""
+	data = _load_data()
+	industries: List[str] = list(data.get("industries") or [])
+
+	representative_industry: Optional[str] = industries[0] if industries else None
+
+	# Live examples
+	overview_example: Optional[Dict] = get_industry_overview(representative_industry) if representative_industry else None
+	company_ranking_example: Optional[Dict] = None
+	for industry_key, entries in (data.get("scoresData", {}) or {}).items():
+		if entries:
+			company_ranking_example = dict(_transform_entry(entries[0]), industry=industry_key)
+			break
+	periods_example: List[Dict] = get_available_periods()
+
+	# Top companies example list
+	top_companies_list: List[Dict] = []
+	if representative_industry:
+		top_companies_list = get_top_companies(representative_industry)
+	if not top_companies_list and isinstance(overview_example, dict):
+		maybe = overview_example.get("top_companies")
+		if isinstance(maybe, list):
+			top_companies_list = list(maybe)
+
+	# Per-industry available periods
+	periods_by_industry: Dict[str, List[Dict]] = {}
+	for ind in industries:
+		periods_by_industry[ind] = get_available_periods(industry=ind)
+
+	return {
+		"industries": industries,
+		"examples": {
+			"overview": overview_example,
+			"company_ranking": company_ranking_example,
+			"top_companies": top_companies_list,
+			"periods": periods_example,
+			"periods_by_industry": periods_by_industry,
+		},
+	}

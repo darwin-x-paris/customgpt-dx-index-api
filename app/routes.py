@@ -12,6 +12,7 @@ from .services.service_industries import (
 	get_industry_overview,
 	search_companies,
 	get_available_periods,
+	get_discover_schema,
 )
 
 
@@ -150,16 +151,16 @@ def api_get_top_companies(industry: str):
 
 @api_bp.get('/search/companies')
 def api_search_companies():
-	query = request.args.get('query', default=None, type=str)
+	company = request.args.get('company', default=None, type=str)
 	limit = request.args.get('limit', default=25, type=int)
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
-	if not query:
-		return jsonify({"error": "Query parameter 'query' is required"}), 400
+	if not company:
+		return jsonify({"error": "Query parameter 'company' is required"}), 400
 	if limit <= 0:
 		return jsonify({"error": "'limit' must be > 0"}), 400
-	results = search_companies(query, limit=limit, year=year, month=month)
-	return jsonify({"query": query, "year": year, "month": month, "limit": limit, "results": results}), 200
+	results = search_companies(company, limit=limit, year=year, month=month)
+	return jsonify({"company": company, "year": year, "month": month, "limit": limit, "results": results}), 200
 
 
 @api_bp.get('/periods')
@@ -167,6 +168,12 @@ def api_get_periods():
 	industry = request.args.get('industry', default=None, type=str)
 	items = get_available_periods(industry=industry)
 	return jsonify({"industry": (industry.upper() if industry else None), "periods": items}), 200
+
+
+@api_bp.get('/discover')
+def api_discover():
+	data = get_discover_schema()
+	return jsonify(data), 200
 
 
 
