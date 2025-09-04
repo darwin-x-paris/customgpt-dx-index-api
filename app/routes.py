@@ -4,6 +4,7 @@ from .services.service_industries import (
 	get_industries,
 	get_industry_companies,
 	get_company_data,
+	get_company_entries,
 	get_companies_data,
 	get_company_nth_rank,
 	get_industry_rankings,
@@ -67,6 +68,13 @@ def api_get_company():
 	month = request.args.get('month', default=None, type=int)
 	if not name:
 		return jsonify({"error": "Query parameter 'name' is required"}), 400
+	# When no year/month filters are specified, return ALL entries for the company
+	if year is None and month is None:
+		items = get_company_entries(name)
+		if not items:
+			return jsonify({"error": f"Company not found: {name}"}), 404
+		return jsonify({"company": name, "results": items}), 200
+	# Otherwise return the single matching entry
 	data = get_company_data(name, year=year, month=month)
 	if not data:
 		return jsonify({"error": f"Company not found: {name}"}), 404
@@ -142,16 +150,16 @@ def api_get_top_companies(industry: str):
 
 @api_bp.get('/search/companies')
 def api_search_companies():
-	query = request.args.get('q', default='', type=str)
+	query = request.args.get('query', default=None, type=str)
 	limit = request.args.get('limit', default=25, type=int)
 	year = request.args.get('year', default=None, type=str)
 	month = request.args.get('month', default=None, type=int)
 	if not query:
-		return jsonify({"error": "Query parameter 'q' is required"}), 400
+		return jsonify({"error": "Query parameter 'query' is required"}), 400
 	if limit <= 0:
 		return jsonify({"error": "'limit' must be > 0"}), 400
 	results = search_companies(query, limit=limit, year=year, month=month)
-	return jsonify({"q": query, "year": year, "month": month, "limit": limit, "results": results}), 200
+	return jsonify({"query": query, "year": year, "month": month, "limit": limit, "results": results}), 200
 
 
 @api_bp.get('/periods')

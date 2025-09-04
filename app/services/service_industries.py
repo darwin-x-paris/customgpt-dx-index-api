@@ -88,6 +88,25 @@ def get_company_data(company: str, year: Optional[str] = None, month: Optional[i
 	return None
 
 
+def get_company_entries(company: str, year: Optional[str] = None, month: Optional[int] = None) -> List[Dict]:
+	"""Return all ranking entries for a company across industries and periods.
+
+	Adds an "industry" field to each returned dict.
+	Optionally filters by year and/or month.
+	"""
+	needle = company.strip().lower()
+	data = _load_data()
+	results: List[Dict] = []
+	for industry_key, entries in (data.get("scoresData", {}) or {}).items():
+		for entry in entries:
+			name = str(entry.get("company", "")).strip().lower()
+			if name == needle and _matches_year_month(entry, year=year, month=month):
+				result = _transform_entry(entry)
+				result["industry"] = industry_key
+				results.append(result)
+	return results
+
+
 def get_companies_data(company_list: List[str], industry: Optional[str] = None, year: Optional[str] = None, month: Optional[int] = None) -> Dict[str, Optional[Dict]]:
 	"""Return a mapping of company name to company data.
 
