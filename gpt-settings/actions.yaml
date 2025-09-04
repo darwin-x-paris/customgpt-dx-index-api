@@ -65,6 +65,7 @@ paths:
     get:
       operationId: get_company
       summary: Get company data by exact name
+      description: Returns a single entry when year/month are specified; otherwise returns all entries for the company.
       parameters:
         - in: query
           name: name
@@ -83,11 +84,13 @@ paths:
             type: integer
       responses:
         "200":
-          description: Company ranking entry
+          description: Company ranking entry or list of entries
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompanyRanking'
+                oneOf:
+                  - $ref: '#/components/schemas/CompanyRanking'
+                  - $ref: '#/components/schemas/CompanyEntriesResponse'
         "404":
           description: Not found
 
@@ -276,7 +279,7 @@ paths:
       summary: Search companies by substring
       parameters:
         - in: query
-          name: q
+          name: query
           required: true
           schema:
             type: string
@@ -304,7 +307,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  q:
+                  query:
                     type: string
                   year:
                     type: ["string", "null"]
@@ -422,4 +425,14 @@ components:
           type: ["number", "null"]
         industry:
           type: string
+
+    CompanyEntriesResponse:
+      type: object
+      properties:
+        company:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyRanking'
 
